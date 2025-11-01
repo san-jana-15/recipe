@@ -3,16 +3,26 @@ const asyncHandler = require('express-async-handler');
 const Recipe = require('../models/Recipe');
 const { validationResult } = require('express-validator');
 
-// Create a new recipe
+/**
+ * @desc    
+ * @route   
+ * @access  
+ */
 const createRecipe = asyncHandler(async (req, res) => {
-  // validation errors from express-validator
+  
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ message: 'Validation error', errors: errors.array() });
   }
 
   const {
-    title, description = '', ingredients, steps, prepTimeMinutes = 0, cookTimeMinutes = 0, servings = 1
+    title,
+    description = '',
+    ingredients,
+    steps,
+    prepTimeMinutes = 0,
+    cookTimeMinutes = 0,
+    servings = 1,
   } = req.body;
 
   const recipe = new Recipe({
@@ -22,27 +32,44 @@ const createRecipe = asyncHandler(async (req, res) => {
     steps,
     prepTimeMinutes,
     cookTimeMinutes,
-    servings
+    servings,
   });
 
   const created = await recipe.save();
   res.status(201).json(created);
 });
 
-// Get all recipes
+/**
+ * @desc    
+ * @route   
+ * @access  
+ */
 const getAllRecipes = asyncHandler(async (req, res) => {
-  // simple pagination + optional search by title
   const { page = 1, limit = 20, q } = req.query;
+
   const filter = {};
   if (q) filter.title = { $regex: q, $options: 'i' };
 
   const skip = (Math.max(1, Number(page)) - 1) * Number(limit);
   const total = await Recipe.countDocuments(filter);
-  const recipes = await Recipe.find(filter).sort({ createdAt: -1 }).skip(skip).limit(Number(limit));
-  res.json({ page: Number(page), limit: Number(limit), total, data: recipes });
+  const recipes = await Recipe.find(filter)
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(Number(limit));
+
+  res.json({
+    page: Number(page),
+    limit: Number(limit),
+    total,
+    data: recipes,
+  });
 });
 
-// Get recipe by id
+/**
+ * @desc    
+ * @route   
+ * @access  
+ */
 const getRecipeById = asyncHandler(async (req, res) => {
   const recipe = await Recipe.findById(req.params.id);
   if (!recipe) {
@@ -52,9 +79,13 @@ const getRecipeById = asyncHandler(async (req, res) => {
   res.json(recipe);
 });
 
-// Update recipe by id
+/**
+ * @desc    
+ * @route  
+ * @access  
+ */
 const updateRecipe = asyncHandler(async (req, res) => {
-  // validation
+
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ message: 'Validation error', errors: errors.array() });
@@ -66,7 +97,16 @@ const updateRecipe = asyncHandler(async (req, res) => {
     throw new Error('Recipe not found');
   }
 
-  const updatableFields = ['title', 'description', 'ingredients', 'steps', 'prepTimeMinutes', 'cookTimeMinutes', 'servings'];
+  const updatableFields = [
+    'title',
+    'description',
+    'ingredients',
+    'steps',
+    'prepTimeMinutes',
+    'cookTimeMinutes',
+    'servings',
+  ];
+
   updatableFields.forEach((field) => {
     if (req.body[field] !== undefined) recipe[field] = req.body[field];
   });
@@ -75,15 +115,22 @@ const updateRecipe = asyncHandler(async (req, res) => {
   res.json(updated);
 });
 
-// Delete recipe by id
+/**
+ * @desc    
+ * @route   
+ * @access 
+ */
 const deleteRecipe = asyncHandler(async (req, res) => {
   const recipe = await Recipe.findById(req.params.id);
   if (!recipe) {
     res.status(404);
     throw new Error('Recipe not found');
   }
-  await recipe.remove();
-  res.json({ message: 'Recipe removed' });
+
+ 
+  await recipe.deleteOne();
+
+  res.json({ message: 'Recipe deleted successfully' });
 });
 
 module.exports = {
@@ -91,5 +138,5 @@ module.exports = {
   getAllRecipes,
   getRecipeById,
   updateRecipe,
-  deleteRecipe
+  deleteRecipe,
 };
